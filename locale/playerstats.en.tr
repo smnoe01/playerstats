@@ -1,0 +1,28 @@
+# textdomain: playerstats
+
+@1=@1
+playername=playername
+show player statistics=show player statistics
+Invalid player name=Invalid player name
+Player @1 not found=Player @1 not found
+No statistics found for @1=No statistics found for @1
+Statistics for @1:=Statistics for @1:
+Kills: @1 | Deaths: @2 | K/D: @3=Kills: @1 | Deaths: @2 | K/D: @3
+Messages: @1=Messages: @1
+Blocks broken: @1 | Blocks placed: @2=Blocks broken: @1 | Blocks placed: @2
+Items crafted: @1=Items crafted: @1
+Playtime: @1=Playtime: @1
+Reset your statistics (requires confirmation)=Reset your statistics (requires confirmation)
+Your statistics have been reset successfully!=Your statistics have been reset successfully!
+Failed to reset statistics=Failed to reset statistics
+This will permanently delete all your statistics! Use /reset_stats again within 30 seconds to confirm.=This will permanently delete all your statistics! Use /reset_stats again within 30 seconds to confirm.
+<player_name> <type> <amount>=<player_name> <type> <amount>
+Set player statistics (kills, deaths, messages, blocks_broken, blocks_placed, items_crafted, playtime)=Set player statistics (kills, deaths, messages, blocks_broken, blocks_placed, items_crafted, playtime)
+Usage: /set_stats <player_name> <type> <amount>=Usage: /set_stats <player_name> <type> <amount>
+Invalid amount: @1 (must be a number)=Invalid amount: @1 (must be a number)
+Amount must be positive or zero=Amount must be positive or zero
+Invalid stat type. Valid types: @1=Invalid stat type. Valid types: @1
+Could not retrieve statistics for @1=Could not retrieve statistics for @1
+Failed to save statistics for @1=Failed to save statistics for @1
+Statistics updated for @1=Statistics updated for @1
+@1: @2 => @3=@1: @2 => @3

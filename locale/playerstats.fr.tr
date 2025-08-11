@@ -1,0 +1,28 @@
+# textdomain: playerstats
+
+@1=@1
+playername=nom_du_joueur
+show player statistics=afficher les statistiques du joueur
+Invalid player name=Nom de joueur invalide
+Player @1 not found=Joueur @1 introuvable
+No statistics found for @1=Aucune statistique trouvée pour @1
+Statistics for @1:=Statistiques pour @1 :
+Kills: @1 | Deaths: @2 | K/D: @3=Éliminations: @1 | Morts: @2 | K/D: @3
+Messages: @1=Messages: @1
+Blocks broken: @1 | Blocks placed: @2=Blocs cassés: @1 | Blocs placés: @2
+Items crafted: @1=Objets fabriqués: @1
+Playtime: @1=Temps de jeu: @1
+Reset your statistics (requires confirmation)=Réinitialiser vos statistiques (nécessite une confirmation)
+Your statistics have been reset successfully!=Vos statistiques ont été réinitialisées avec succès !
+Failed to reset statistics=Échec de la réinitialisation des statistiques
+This will permanently delete all your statistics! Use /reset_stats again within 30 seconds to confirm.=Ceci supprimera définitivement toutes vos statistiques ! Utilisez /reset_stats à nouveau dans les 30 secondes pour confirmer.
+<player_name> <type> <amount>=<nom_joueur> <type> <quantité>
+Set player statistics (kills, deaths, messages, blocks_broken, blocks_placed, items_crafted, playtime)=Définir les statistiques du joueur (kills, deaths, messages, blocks_broken, blocks_placed, items_crafted, playtime)
+Usage: /set_stats <player_name> <type> <amount>=Usage: /set_stats <nom_joueur> <type> <quantité>
+Invalid amount: @1 (must be a number)=Quantité invalide: @1 (doit être un nombre)
+Amount must be positive or zero=La quantité doit être positive ou nulle
+Invalid stat type. Valid types: @1=Type de statistique invalide. Types valides: @1
+Could not retrieve statistics for @1=Impossible de récupérer les statistiques pour @1
+Failed to save statistics for @1=Échec de la sauvegarde des statistiques pour @1
+Statistics updated for @1=Statistiques mises à jour pour @1
+@1: @2 => @3=@1: @2 => @3
