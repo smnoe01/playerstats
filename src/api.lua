@@ -402,7 +402,7 @@ end)
 
 core.register_chatcommand("r", {
     params = S("[@1]", "playername"),
-    description = S("show player statistics"),
+    description = S("Show player statistics"),
     func = function(playername, param)
         if not playername or playername == "" then
             return false, S("Invalid player name")
