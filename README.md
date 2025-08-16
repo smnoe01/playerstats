@@ -1,4 +1,4 @@
-# PlayerStats (1.1.0 Release)
+# PlayerStats (1.1.0 Bug Fix)
 Adds statistics for each player
 
 ## Features
