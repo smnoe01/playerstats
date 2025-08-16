@@ -71,6 +71,51 @@ Examples:
 }
 ```
 
+### Api support
+
+All statistics for the player, or nil if the player does not exist
+Kills, deaths, messages, blocks_broken, blocks_placed, items_crafted, playtime
+```lua
+function playerstats.get_stats(playername)
+    return get_stats(playername)
+end
+```
+
+
+Set a specified stat for a player, it will increase the the old value by the new one
+stats: Kills, deaths, messages, blocks_broken, blocks_placed, items_crafted, playtime
+```lua
+function playerstats.set_stats(playername, stats)
+    return set_stats(playername, stats)
+end
+```
+
+kills, deaths, messages, blocks_broken, blocks_placed, items_crafted
+and playtime (in seconds)
+How does it work, it will get the current stats for player and add the amount to the specified stats
+DO NOT CONFUSE IT WITH playerstats.set_stats !!
+```lua
+function playerstats.modify_stat(playername, stat_key, amount)
+    return modify_stat(playername, stat_key, amount)
+end
+```
+
+Check if the player exists, either in the game or in the statistics
+Returns true if the player exists, false otherwise
+```lua
+function playerstats.player_exists(playername)
+    return player_exists(playername)
+end
+```
+
+Reset the statistics for a player
+This will set all statistics to their default values (0)
+Returns true if successful, false otherwise
+```lua
+function playerstats.reset_stats(playername)
+    return reset_stats(playername)
+end
+```
 Copyright (C) 2025
 Smnoe01 (Atlante) (discord: smnoe01)
 
