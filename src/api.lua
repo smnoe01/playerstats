@@ -14,14 +14,19 @@ interpreted as a contract, You are granted the Licensed Rights in
 consideration of Your acceptance of these terms and conditions, and the
 Licensor grants You such rights in consideration of benefits the
 Licensor receives from making the Licensed Material available under
-these terms and conditions.
+these terms and conditions. See license.txt for more details
 
 --]]
 
 local modname = core.get_current_modname()
 local storage = core.get_mod_storage()
-local S = core.get_translator(core.get_current_modname()) -- Translation (it, es, en, fr, ru, de)
+local S = core.get_translator(modname) -- Translation (it, es, en, fr, ru, de)
 local C = core.colorize
+
+-- For discord, dcwebhook, etc
+local function is_valid_playername(playername)
+    return playername and playername ~= ""
+end
 
 local default_stats = {
     kills = 0,
@@ -38,7 +43,7 @@ local dig_batches = {}
 local place_batches = {}
 
 -- Make sure the storage is initialized
-local function safe_get(key)
+local function get_storage(key)
     if not key or key == "" then
         return nil
     end
@@ -47,9 +52,9 @@ local function safe_get(key)
     return success and result or nil
 end
 
--- Safe set function to handle potential errors during storage operations
+-- Function to handle potential errors during storage operations
 -- This function will log an error if the set operation fails (Debug)
-local function safe_set(key, value)
+local function save_data (key, value)
     if not key or key == "" or not value then
         return false
     end
@@ -64,18 +69,17 @@ end
 
 -- Get player statistics, initializing if necessary (newplayer)
 local function get_stats(playername)
-    if not playername or playername == "" then
+    if not is_valid_playername then
         return nil
     end
 
-    local data = safe_get("stats_" .. playername)
+    local data = get_storage("stats_" .. playername)
     if not data or data == "" then
         return nil
     end
 
     local success, stats = pcall(core.deserialize, data)
     if not success or not stats or type(stats) ~= "table" then
-        -- We use modname because we cant get core.get_current_modname() in register_on_newplayer
         core.log("warning", "[" .. modname .. "] Corrupted stats for " .. playername .. ", reinitializing")
 
         return nil
@@ -92,7 +96,7 @@ local function get_stats(playername)
 end
 
 local function set_stats(playername, stats)
-    if not playername or playername == "" or not stats or type(stats) ~= "table" then
+    if not is_valid_playername or not stats or type(stats) ~= "table" then
         return false
     end
 
@@ -109,13 +113,13 @@ local function set_stats(playername, stats)
         return false
     end
 
-    return safe_set("stats_" .. playername, data)
+    return save_data("stats_" .. playername, data)
 end
 
 -- Fonction to ensure player statistics are initialized
 -- This function checks if the player exists and initializes their stats if not already done
 local function ensure_stats(playername)
-    if not playername or playername == "" then
+    if not is_valid_playername then
         return nil
     end
 
@@ -153,32 +157,22 @@ local function player_exists(playername)
     return playername and playername ~= "" and (core.player_exists(playername) or get_stats(playername) ~= nil)
 end
 
--- Just a simple function to show a better display of numbers
--- For example: "1000" => "1 000" or 72624 => "72 624"
 local function format_number(num)
     if not num or type(num) ~= "number" then
         return "0"
     end
 
+    -- Convert the number to a string and remove any decimal part
+    -- This is to ensure we only format whole numbers
     local str = tostring(math.floor(num))
-    local len = #str
-
-    if len <= 3 then -- If we have less or 3 digits, then we dont need to format it
+    if #str <= 3 then
         return str
     end
 
-    local parts = {}
-    local start = len % 3
-
-    if start > 0 then
-        parts[#parts + 1] = str:sub(1, start)
-    end
-
-    for i = start + 1, len, 3 do
-        parts[#parts + 1] = str:sub(i, i + 2)
-    end
-
-    return table.concat(parts, " ") -- We add the space
+    -- Reverse the string, add spaces every 3 digits, then reverse it back
+    -- This is a simple way to format numbers with spaces
+    -- Example: "1234567" => "1 234 567"
+    return str:reverse():gsub("(%d%d%d)", "%1 "):reverse():gsub("^ ", "")
 end
 
 local function format_time(seconds)
@@ -233,10 +227,9 @@ local function save_playtime(playername)
     end
 end
 
-
 -- We use batches to avoid too many calls to modify_stat, like when we have more of 30+ player, it can be very dangerous in terms of used ressources
 -- Batches are used to accumulate dig/place actions and process them in one go
--- This is more efficient and avoids performance issues with too many calls to modify_stat
+-- This is more efficient and avoids performance issues
 local function process_dig_batch(playername)
     if dig_batches[playername] and dig_batches[playername] > 0 then
         modify_stat(playername, "blocks_broken", dig_batches[playername])
@@ -250,6 +243,10 @@ local function process_place_batch(playername)
         place_batches[playername] = nil
     end
 end
+
+--------------------------------------------------------------
+--- CORE EVENTS PART
+--------------------------------------------------------------
 
 core.register_on_newplayer(function(player)
     if not player then return end
@@ -297,42 +294,6 @@ core.register_on_shutdown(function()
     end
 end)
 
-core.register_on_punchplayer(function(player, hitter, time_from_last_punch, tool_capabilities, dir, damage)
-    if not hitter or not hitter:is_player() or not player then
-        return
-    end
-
-    local hitter_playername = hitter:get_player_name()
-    local player_playername = player:get_player_name()
-
-    if not hitter_playername or hitter_playername == "" or not player_playername or player_playername == "" then
-        return
-    end
-
-    if hitter_playername == player_playername then
-        return
-    end
-
-    if core.settings and core.settings:get_bool() then
-        local pvp_enabled = core.settings:get_bool("enable_pvp")
-        if pvp_enabled == false then
-            return
-        end
-    end
-
-    local pos = player:get_pos()
-    if pos and core.is_protected then
-        if core.is_protected(pos, hitter_playername) then
-            return
-        end
-    end
-
-    local current_hp = player:get_hp()
-    if current_hp and current_hp > 0 and (current_hp - damage) <= 0 then
-        modify_stat(hitter_playername, "kills", 1)
-    end
-end)
-
 core.register_on_dieplayer(function(player, reason)
     if not player then
         return
@@ -353,7 +314,7 @@ core.register_on_dieplayer(function(player, reason)
 end)
 
 core.register_on_chat_message(function(playername, message)
-    if not playername or playername == "" or not message or message == "" then
+    if not is_valid_playername or not message or message == "" then
         return
     end
     -- Maybe add that a command can be a message ?
@@ -390,7 +351,7 @@ core.register_on_craft(function(itemstack, player, old_craft_grid, craft_inv)
     end
 
     local playername = player:get_player_name()
-    if not playername or playername == "" then
+    if not is_valid_playername then
         return
     end
 
@@ -400,11 +361,15 @@ core.register_on_craft(function(itemstack, player, old_craft_grid, craft_inv)
     end
 end)
 
+--------------------------------------------------------------
+--- COMMANDS PART
+--------------------------------------------------------------
+
 core.register_chatcommand("r", {
     params = S("[@1]", "playername"),
     description = S("Show player statistics"),
     func = function(playername, param)
-        if not playername or playername == "" then
+        if not is_valid_playername then
             return false, S("Invalid player name")
         end
 
@@ -425,19 +390,24 @@ core.register_chatcommand("r", {
         local kd_ratio = stats.deaths > 0 and string.format("%.2f", stats.kills / stats.deaths) or "N/A"
         local msg = C("#FCD203", S("Statistics for @1:", target)) .. "\n" ..
 
-                    S("Kills: @1 | Deaths: @2 | K/D: @3", 
+                    -- Kills / Deaths / K/D Ratio
+                    S("Kills: @1 | Deaths: @2 | K/D: @3",
                         C("#FCD203", format_number(stats.kills)),
                         C("#FCD203", format_number(stats.deaths)),
                         C("#FCD203", kd_ratio)) .. "\n" ..
 
-
+                    -- Messages
                     S("Messages: @1", C("#FCD203", format_number(stats.messages))) .. "\n" ..
 
+                    -- Blocks broken / Blocks placed
                     S("Blocks broken: @1 | Blocks placed: @2",
                         C("#FCD203", format_number(stats.blocks_broken)),
                         C("#FCD203", format_number(stats.blocks_placed))) .. "\n" ..
 
+                    -- Items crafted
                     S("Items crafted: @1", C("#FCD203", format_number(stats.items_crafted))) .. "\n" ..
+
+                    -- Playtime
                     S("Playtime: @1", C("#FCD203", format_time(stats.playtime)))
         return true, msg
     end,
@@ -445,41 +415,46 @@ core.register_chatcommand("r", {
 
 local reset_confirmations = {}
 
+local function planify_reset(playername)
+    local current_time = os.time()
+    reset_confirmations[playername] = current_time + 30
+    local warning_msg = C("red",
+        S("This will permanently delete all your statistics! Use /reset_stats again within 30 seconds to confirm.")
+    )
+    return true, warning_msg
+end
+
+local function reset_stats(playername)
+    if not is_valid_playername then
+        return false, S("Invalid player name")
+    end
+
+    local current_time = os.time()
+    update_playtime(playername)
+
+    if reset_confirmations[playername] then
+        local time_left = reset_confirmations[playername] - current_time
+        if time_left > 0 then
+            reset_confirmations[playername] = nil
+            local new_stats = table.copy(default_stats)
+            if set_stats(playername, new_stats) then
+                return true, S("Your statistics have been reset successfully!")
+            else
+                return false, C("red", S("Failed to reset statistics"))
+            end
+        else
+            reset_confirmations[playername] = nil
+        end
+    end
+
+    return planify_reset(playername)
+end
+
 core.register_chatcommand("reset_stats", {
     params = "",
     description = S("Reset your statistics (requires confirmation)"),
     func = function(playername, param)
-        if not playername or playername == "" then
-            return false, S("Invalid player name")
-        end
-
-        local current_time = os.time()
-        update_playtime(playername)
-
-        if reset_confirmations[playername] then
-            local time_left = reset_confirmations[playername] - current_time
-
-            if time_left > 0 then
-                reset_confirmations[playername] = nil
-
-                local new_stats = table.copy(default_stats)
-                if set_stats(playername, new_stats) then
-                    return true, S("Your statistics have been reset successfully!")
-                else
-                    return false, C("red", S("Failed to reset statistics"))
-                end
-            else
-                reset_confirmations[playername] = nil
-            end
-        end
-
-        reset_confirmations[playername] = current_time + 30
-
-        local warning_msg = C("red",
-            S("This will permanently delete all your statistics! Use /reset_stats again within 30 seconds to confirm.")
-        )
-
-        return true, warning_msg
+        return reset_stats(playername)
     end,
 })
 
@@ -488,75 +463,179 @@ core.register_chatcommand("set_stats", {
     description = S("Set player statistics (kills, deaths, messages, blocks_broken, blocks_placed, items_crafted, playtime)"),
     privs = {server = true},
     func = function(name, param)
-        if not param or param == "" then
+        local parts = param and param:match("%S") and {} or nil
+        if not parts then
             return false, S("Usage: /set_stats <player_name> <type> <amount>")
         end
 
-        local parts = {}
-        for part in param:gmatch("%S+") do
-            table.insert(parts, part)
+        for p in param:gmatch("%S+") do
+            parts[#parts + 1] = p
         end
 
-        if #parts < 3 then
+        if #parts ~= 3 then
             return false, S("Usage: /set_stats <player_name> <type> <amount>")
         end
 
-        local target = parts[1]
-        local stat_type = parts[2]:lower()
-        local amount = tonumber(parts[3])
+        local target, stat_type, amount = parts[1], parts[2]:lower(), tonumber(parts[3])
 
-        if not player_exists(target) then
-            return false, S("Player @1 not found", target)
+        if not amount or amount < 0 then
+            return false, S("Invalid amount: @1 (must be a positive number)", parts[3])
         end
 
-        if not amount then
-            return false, S("Invalid amount: @1 (must be a number)", parts[3])
-        end
-
-        if amount < 0 then
-            return false, S("Amount must be positive or zero")
-        end
-
-        local valid_stats = {
-            kills = true,
-            deaths = true,
-            messages = true,
-            blocks_broken = true,
-            blocks_placed = true,
-            items_crafted = true,
-            playtime = true
-        }
-
-        if not valid_stats[stat_type] then
-            local valid_list = ""
-            for stat, _ in pairs(valid_stats) do
-                valid_list = valid_list .. stat .. ", "
-            end
-            valid_list = valid_list:sub(1, -3)
-            return false, S("Invalid stat type. Valid types: @1", valid_list)
+        if not default_stats[stat_type] then
+            return false, S("Invalid stat type. Valid types: kills, deaths, messages, blocks_broken, blocks_placed, items_crafted, playtime")
         end
 
         local stats = get_stats(target)
         if not stats then
-            return false, S("Could not retrieve statistics for @1", target)
+            return false, S("Player @1 not found", target)
         end
 
-        local old_value = stats[stat_type] or 0
+        local old_val = stats[stat_type]
         stats[stat_type] = amount
 
         if not set_stats(target, stats) then
             return false, S("Failed to save statistics for @1", target)
         end
 
-        local formatted_old = stat_type == "playtime" and format_time(old_value) or format_number(old_value)
-        local formatted_new = stat_type == "playtime" and format_time(amount) or format_number(amount)
+        local old_str = stat_type == "playtime" and format_time(old_val) or format_number(old_val)
+        local new_str = stat_type == "playtime" and format_time(amount) or format_number(amount)
+        local stat_name = stat_type:gsub("_", " "):gsub("^%l", string.upper)
 
-        local msg = C("#FCD203", S("Statistics updated for @1", target)) .. "\n" ..
-                    S("@1: @2 => @3",
-                        stat_type:gsub("_", " "):gsub("^%l", string.upper),
-                        C("red", formatted_old),
-                        C("#FCD203", formatted_new))
-
-        return true, msg
+        return true, C("#FCD203", S("Statistics updated for @1", target)) .. "\n" ..
+                     S("@1: @2 => @3", stat_name, C("red", old_str), C("#FCD203", new_str))
     end,
 })
+
+--------------------------------------------------------------
+--- API PART
+--------------------------------------------------------------
+-- Heres the API for the playerstats mod
+-- This API allows you to get, set, modify and reset player statistics
+playerstats = {}
+
+
+-- All statistics for the player, or nil if the player does not exist
+-- Kills, deaths, messages, blocks_broken, blocks_placed, items_crafted, playtime
+function playerstats.get_stats(playername)
+    return get_stats(playername)
+end
+
+
+-- Set a specified stat for a player, it will increase the the old value by the new one
+-- stats: Kills, deaths, messages, blocks_broken, blocks_placed, items_crafted, playtime
+function playerstats.set_stats(playername, stats)
+    return set_stats(playername, stats)
+end
+
+
+-- Available stats:
+-- kills, deaths, messages, blocks_broken, blocks_placed, items_crafted
+-- and playtime (in seconds)
+-- How does it work, it will get the current stats for player and add the amount to the specified stats
+-- DO NOT CONFUSE IT WITH playerstats.set_stats !!
+function playerstats.modify_stat(playername, stat_key, amount)
+    return modify_stat(playername, stat_key, amount)
+end
+
+
+-- Check if the player exists, either in the game or in the statistics
+-- Returns true if the player exists, false otherwise
+function playerstats.player_exists(playername)
+    return player_exists(playername)
+end
+
+
+-- Reset the statistics for a player
+-- This will set all statistics to their default values (0)
+-- Returns true if successful, false otherwise
+function playerstats.reset_stats(playername)
+    return reset_stats(playername)
+end
+
+
+
+--------------------------------------------------
+--- MIGRATION PART
+--------------------------------------------------
+if core.get_modpath("atl_server_statistics") then
+    local migration_key = "migration_done_v2"
+    local stats_mapping = {
+        ["Messages Count"] = "messages",
+        ["Deaths Count"] = "deaths", 
+        ["Kills Count"] = "kills",
+        ["Nodes Dug"] = "blocks_broken",
+        ["Nodes Placed"] = "blocks_placed",
+        ["Items Crafted"] = "items_crafted",
+        ["PlayTime"] = "playtime"
+    }
+
+    storage.set_string(storage, "migration_done", "false")
+
+    local function perform_migration()
+        local success, data = pcall(atl_server_statistics.mod_storage.to_table, atl_server_statistics.mod_storage)
+
+        if not success or not data or not data.fields then
+            storage.set_string(storage, migration_key, "true")
+            core.chat_send_all(core.colorize("#FF0000", S("Automatic migration to 'playerstats' failed. Use /force_migrate")))
+            return
+        end
+
+        local atl_data = data.fields
+        local migrated_players = {}
+
+        for key, value in pairs(atl_data) do
+            for old_stat, new_stat in pairs(stats_mapping) do
+                local escaped_stat = old_stat:gsub("[%^%$%(%)%%%.%[%]%*%+%-%?]", "%%%1")
+                local player_name = key:match("^(.+)_" .. escaped_stat .. "$")
+
+                if player_name and player_name ~= "" then
+                    migrated_players[player_name] = migrated_players[player_name] or table.copy(default_stats)
+                    local numeric_value = tonumber(value)
+
+                    if numeric_value and numeric_value >= 0 then
+                        migrated_players[player_name][new_stat] = math.floor(numeric_value)
+                    end
+                end
+            end
+        end
+
+        local migrated_count = 0
+        for player_name, player_stats in pairs(migrated_players) do
+            if set_stats(player_name, player_stats) then
+                migrated_count = migrated_count + 1
+            end
+        end
+
+        storage.set_string(storage, migration_key, "true")
+
+        if migrated_count > 0 then
+            core.chat_send_all(C("red", "Success! @1 players migrated to new system 'playerstats'", migrated_count))
+            core.chat_send_all(C("red", "IMPORTANT: You can now disable 'atl_server_statistics' mod and restart server"))
+        else
+            core.chat_send_all(C("red", S("No data found to migrate for 'playerstats'")))
+        end
+    end
+
+    core.register_chatcommand("force_migrate", {
+        description = S("Force migration from atl_server_statistics"),
+        privs = {server = true},
+        func = function()
+            storage.set_string(storage, migration_key, "false")
+            perform_migration()
+            return true, S("Migration forced")
+        end,
+    })
+
+    function atl_server_statistics.increment_event_stat(player_name, event_key, amount)
+        -- Nothing, we disable it
+    end
+
+    function atl_server_statistics.update_playtime_on_stats(player_name)
+        -- Nothing, we disable it
+    end
+
+    core.register_on_mods_loaded(function()
+        core.after(1, perform_migration)
+    end)
+end

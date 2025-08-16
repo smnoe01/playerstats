@@ -26,3 +26,8 @@ Could not retrieve statistics for @1=Konnte Statistiken für @1 nicht abrufen
 Failed to save statistics for @1=Speichern der Statistiken für @1 fehlgeschlagen
 Statistics updated for @1=Statistiken aktualisiert für @1
 @1: @2 => @3=@1: @2 => @3
+
+Automatic migration to 'playerstats' failed. Use /force_migrate=Automatische Migration zu 'playerstats' fehlgeschlagen. Verwende /force_migrate
+Success! @1 players migrated to new system 'playerstats'=Erfolg! @1 Spieler zu neuem System 'playerstats' migriert
+IMPORTANT: You can now disable 'atl_server_statistics' mod and restart server=WICHTIG: Du kannst jetzt die 'atl_server_statistics' Mod deaktivieren und den Server neustarten
+No data found to migrate for 'playerstats'=Keine Daten für Migration zu 'playerstats' gefunden
