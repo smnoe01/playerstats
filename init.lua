@@ -18,10 +18,7 @@ these terms and conditions.
 
 --]]
 
-local modname = core.get_current_modname()
+
 local version = "1.0.0"
-local modpath = core.get_modpath(modname)
 
-dofile(modpath .. "/src/api.lua")
-
-core.log("action", "[" .. core.get_current_modname() .. "] Mod initialised, running version " .. version)
+dofile("playerstats/src/api.lua")
